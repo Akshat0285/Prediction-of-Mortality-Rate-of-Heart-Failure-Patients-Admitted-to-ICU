@@ -29,15 +29,23 @@ class Classification:
         self.labels = None
 
     def get_data(self):
+
+        # Read the data
         data = pd.read_csv("training_data.csv")
         labels = pd.read_csv("training_data_targets.csv", header=None, names=['target'])['target']
         data = pd.concat([data, labels], axis=1)
+
+        # Remove the 'age' column
+        # data = data.drop('age', axis=1)
         
         imputed_data = self.impute_data(data.iloc[:, :-1])
         self.get_class_statistics(labels)
         return imputed_data, labels
 
     def select_imputer(self):
+
+        # Select the imputer
+
         if self.impute_opt == 'mean':
             return SimpleImputer(strategy='mean')
         elif self.impute_opt == 'median':
@@ -73,11 +81,14 @@ class Classification:
 
     def classification_pipeline(self):
 
+        # Select the classifier
+
+# Adaboost classifier
         if self.clf_opt == 'ab':
             print('\n\t### Training AdaBoost Classifier ### \n')
             be1 = svm.SVC(kernel='linear', class_weight='balanced', probability=True)
             be2 = LogisticRegression(solver='liblinear', class_weight='balanced') 
-            be3 = DecisionTreeClassifier(max_depth=50)
+            be3 = RandomForestClassifier(max_depth=50, min_samples_split=3, min_samples_leaf=1, criterion = 'gini')
             clf = AdaBoostClassifier(algorithm='SAMME.R', n_estimators=100)
             clf_parameters = {
                 'clf__base_estimator': (be1, be2, be3),
@@ -87,6 +98,8 @@ class Classification:
                 'clf__algorithm': ('SAMME', 'SAMME.R'),
                 'clf__random_state': (0, 10),
             }
+
+# Decision Tree classifier
 
         elif self.clf_opt == 'dt':
             print('\n\t### Training Decision Tree Classifier ### \n')
@@ -99,6 +112,8 @@ class Classification:
                 'clf__ccp_alpha': (0.009, 0.01, 0.05, 0.1),
             }
 
+# Logistic Regression classifier
+
         elif self.clf_opt == 'lr':
             print('\n\t### Training Logistic Regression Classifier ### \n')
             clf = LogisticRegression(solver='liblinear', class_weight='balanced') 
@@ -109,12 +124,16 @@ class Classification:
                 'clf__max_iter': (100, 200, 300),
             }
 
+# Linear SVC classifier
+
         elif self.clf_opt == 'ls':
             print('\n\t### Training Linear SVC Classifier ### \n')
             clf = svm.SVC(kernel='linear', class_weight='balanced', probability=True)  
             clf_parameters = {
                 'clf__C': (0.1, 1, 100),
             }
+
+# KNN classifier
 
         elif self.clf_opt == 'knn':
             print('\n\t### Training KNN Classifier ### \n')
@@ -126,6 +145,8 @@ class Classification:
                 'clf__leaf_size': (30, 50, 100),
             }
 
+# Random Forest classifier
+
         elif self.clf_opt == 'rf':
             print('\n\t ### Training Random Forest Classifier ### \n')
             clf = RandomForestClassifier(max_features=None, class_weight='balanced')
@@ -134,6 +155,8 @@ class Classification:
                 'clf__n_estimators': (30, 50, 100),
                 'clf__max_depth': (10, 20, 30, 50, 100, 200),
             }
+
+# SVM classifier
 
         elif self.clf_opt == 'svm':
             print('\n\t### Training SVM Classifier ### \n')
@@ -146,6 +169,8 @@ class Classification:
         else:
             print('Select a valid classifier \n')
             sys.exit(0)
+
+# Pipeline
 
         pipeline = Pipeline([
             ('imputer', self.select_imputer()),
@@ -203,6 +228,8 @@ class Classification:
 
         # Classification
         clf, clf_parameters = self.classification_pipeline()
+
+        # Grid Search
 
         grid = GridSearchCV(clf, clf_parameters, scoring='f1_macro', cv=5)
         grid.fit(X_resampled, y_resampled)
